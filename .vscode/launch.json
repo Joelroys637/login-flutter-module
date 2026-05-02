@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Flutter Web (Persistent Session)",
+            "request": "launch",
+            "type": "dart",
+            "args": [
+                "-d",
+                "edge",
+                "--web-port=8080",
+                "--web-browser-flag=--user-data-dir=C:\\flutter_web_cache"
+            ]
+        }
+    ]
+}
