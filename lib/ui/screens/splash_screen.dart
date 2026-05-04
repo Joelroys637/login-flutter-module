@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/constants.dart';
-import '../../main.dart'; // To access AuthWrapper
+import 'package:shared_preferences/shared_preferences.dart';
+import 'login_screen.dart';
+import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -15,12 +17,23 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // After 3 seconds, navigate to AuthWrapper which handles state
+    _checkLoginStatus();
+  }
+
+  void _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+    // After 3 seconds, navigate based on login state
     Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const AuthWrapper()),
-      );
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => isLoggedIn ? const HomeScreen() : const LoginScreen(),
+          ),
+        );
+      }
     });
   }
 
@@ -48,7 +61,7 @@ class _SplashScreenState extends State<SplashScreen> {
             const SizedBox(height: 20),
             
             const Text(
-              'Secure App',
+              'ABCD School App',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 28,

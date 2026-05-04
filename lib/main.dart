@@ -6,11 +6,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 
 import 'core/constants.dart';
-import 'providers/auth_provider.dart';
+import 'providers/student_provider.dart';
 import 'ui/screens/splash_screen.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/screens/login_screen.dart';
 import 'firebase_options.dart';
+import 'providers/admin_permission_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,7 +34,8 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider(), lazy: false),
+        ChangeNotifierProvider(create: (_) => StudentProvider()),
+        ChangeNotifierProvider(create: (_) => AdminPermissionProvider()),
       ],
       child: const MyApp(),
     ),
@@ -64,24 +66,3 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
-
-    // Show a loading spinner until we are 100% sure if the user is logged in or out
-    if (authProvider.isInitializing) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (authProvider.userModel != null) {
-      return const HomeScreen();
-    }
-
-    return const LoginScreen();
-  }
-}
