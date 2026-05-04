@@ -22,7 +22,4 @@ This is a Flutter login module using Firebase Authentication.
 - Firebase Auth
 - Cloud Firestore
 
-## ▶️ Run Project
-```bash
-flutter pub get
-flutter run
+
