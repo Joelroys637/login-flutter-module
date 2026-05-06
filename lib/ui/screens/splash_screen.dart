@@ -40,30 +40,28 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.backgroundColor,
       body: Container(
         width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: AppColors.backgroundGradient,
-        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(
-              Icons.lock_person,
+              Icons.admin_panel_settings,
               size: 120,
-              color: Colors.white,
+              color: AppColors.primaryColor,
             )
             .animate()
             .scale(duration: 800.ms, curve: Curves.elasticOut)
             .fadeIn(duration: 600.ms)
-            .shimmer(delay: 1000.ms, duration: 1500.ms, color: AppColors.accentColor.withOpacity(0.5)),
+            .shimmer(delay: 1000.ms, duration: 1500.ms, color: Colors.white.withOpacity(0.5)),
             
             const SizedBox(height: 20),
             
             const Text(
-              'ABCD School App',
+              'Admin Portal',
               style: TextStyle(
-                color: Colors.white,
+                color: Color(0xFF1A1C1E),
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 2,
@@ -74,7 +72,7 @@ class _SplashScreenState extends State<SplashScreen> {
             .slideY(begin: 0.5, curve: Curves.easeOut),
             
             const SizedBox(height: 40),
-            const CircularProgressIndicator(color: AppColors.accentColor)
+            const CircularProgressIndicator(color: AppColors.primaryColor)
             .animate()
             .fadeIn(delay: 800.ms),
           ],

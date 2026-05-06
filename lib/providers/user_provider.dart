@@ -2,9 +2,9 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import '../models/student_model.dart';
+import '../models/user_model.dart';
 
-class StudentProvider extends ChangeNotifier {
+class UserProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   bool _isLoading = false;
@@ -23,7 +23,7 @@ class StudentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> registerStudent(Student student, XFile? imageFile) async {
+  Future<bool> registerUser(UserModel user, XFile? imageFile) async {
     _setLoading(true);
     _setError(null);
     try {
@@ -32,20 +32,21 @@ class StudentProvider extends ChangeNotifier {
       if (imageFile != null) {
         final bytes = await imageFile.readAsBytes();
         photoUrl = base64Encode(bytes);
+      } else {
+        photoUrl = user.photoUrl;
       }
 
-      Student newStudent = Student(
-        name: student.name,
-        age: student.age,
-        address: student.address,
-        previousClass: student.previousClass,
-        passedPreviousClass: student.passedPreviousClass,
-        mobile: student.mobile,
+      UserModel newUser = UserModel(
+        name: user.name,
+        password: user.password,
+        age: user.age,
+        address: user.address,
         photoUrl: photoUrl,
+        role: user.role,
         createdAt: DateTime.now(),
       );
 
-      await _firestore.collection('students').add(newStudent.toMap());
+      await _firestore.collection('users').add(newUser.toMap());
       _setLoading(false);
       return true;
     } catch (e) {
@@ -55,25 +56,19 @@ class StudentProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateStudent(String docId, Student updatedStudent, XFile? newImage) async {
+  Future<bool> updateUser(String docId, UserModel updatedUser, XFile? newImage) async {
     _setLoading(true);
     _setError(null);
     try {
-      Map<String, dynamic> updateData = {
-        'name': updatedStudent.name,
-        'age': updatedStudent.age,
-        'address': updatedStudent.address,
-        'previousClass': updatedStudent.previousClass,
-        'passedPreviousClass': updatedStudent.passedPreviousClass,
-        'mobile': updatedStudent.mobile,
-      };
+      Map<String, dynamic> updateData = updatedUser.toMap();
+      updateData.remove('createdAt'); // Don't update creation time
 
       if (newImage != null) {
         final bytes = await newImage.readAsBytes();
         updateData['photoUrl'] = base64Encode(bytes);
       }
 
-      await _firestore.collection('students').doc(docId).update(updateData);
+      await _firestore.collection('users').doc(docId).update(updateData);
       _setLoading(false);
       return true;
     } catch (e) {
@@ -83,11 +78,11 @@ class StudentProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> deleteStudent(String docId) async {
+  Future<bool> deleteUser(String docId) async {
     _setLoading(true);
     _setError(null);
     try {
-      await _firestore.collection('students').doc(docId).delete();
+      await _firestore.collection('users').doc(docId).delete();
       _setLoading(false);
       return true;
     } catch (e) {
@@ -97,9 +92,21 @@ class StudentProvider extends ChangeNotifier {
     }
   }
 
-  Stream<List<Student>> getStudents() {
-    return _firestore.collection('students').orderBy('createdAt', descending: true).snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => Student.fromMap(doc.data(), doc.id)).toList();
+  Stream<List<UserModel>> getUsers() {
+    return _firestore
+        .collection('users')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      List<UserModel> users = [];
+      for (var doc in snapshot.docs) {
+        try {
+          users.add(UserModel.fromMap(doc.data(), doc.id));
+        } catch (e) {
+          debugPrint("Error parsing user ${doc.id}: $e");
+        }
+      }
+      return users;
     });
   }
 }

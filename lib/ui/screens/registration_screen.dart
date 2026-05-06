@@ -1,14 +1,17 @@
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/constants.dart';
-import '../../models/student_model.dart';
-import '../../providers/student_provider.dart';
-import '../widgets/glass_container.dart';
+import '../../models/user_model.dart';
+import '../../models/role_model.dart';
+import '../../providers/user_provider.dart';
+import '../../providers/role_provider.dart';
 
 class RegistrationScreen extends StatefulWidget {
-  const RegistrationScreen({Key? key}) : super(key: key);
+  final UserModel? user;
+  const RegistrationScreen({Key? key, this.user}) : super(key: key);
 
   @override
   State<RegistrationScreen> createState() => _RegistrationScreenState();
@@ -16,16 +19,28 @@ class RegistrationScreen extends StatefulWidget {
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _ageController = TextEditingController();
-  final _addressController = TextEditingController();
-  final _previousClassController = TextEditingController();
-  final _mobileController = TextEditingController();
-  bool _passedPreviousClass = false;
+  late TextEditingController _nameController;
+  late TextEditingController _passwordController;
+  late TextEditingController _ageController;
+  late TextEditingController _addressController;
+  String? _selectedRole;
   XFile? _imageFile;
   Uint8List? _imageBytes;
 
   final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.user?.name);
+    _passwordController = TextEditingController(text: widget.user?.password);
+    _ageController = TextEditingController(text: widget.user?.age.toString());
+    _addressController = TextEditingController(text: widget.user?.address);
+    _selectedRole = widget.user?.role;
+    if (widget.user?.photoUrl.isNotEmpty ?? false) {
+      _imageBytes = base64Decode(widget.user!.photoUrl);
+    }
+  }
 
   Future<void> _pickImage() async {
     final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -40,39 +55,35 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   void _submit() async {
     if (_formKey.currentState!.validate()) {
-      if (_imageFile == null) {
+      if (_imageBytes == null && _imageFile == null) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a photo')));
         return;
       }
 
-      final student = Student(
+      final user = UserModel(
+        id: widget.user?.id,
         name: _nameController.text.trim(),
+        password: _passwordController.text.trim(),
         age: int.parse(_ageController.text.trim()),
         address: _addressController.text.trim(),
-        previousClass: _previousClassController.text.trim(),
-        passedPreviousClass: _passedPreviousClass,
-        mobile: _mobileController.text.trim(),
-        photoUrl: '', // Handled in Provider
-        createdAt: DateTime.now(),
+        photoUrl: widget.user?.photoUrl ?? '',
+        role: _selectedRole!,
+        createdAt: widget.user?.createdAt ?? DateTime.now(),
       );
 
-      final success = await context.read<StudentProvider>().registerStudent(student, _imageFile);
+      final provider = context.read<UserProvider>();
+      bool success;
+      if (widget.user == null) {
+        success = await provider.registerUser(user, _imageFile);
+      } else {
+        success = await provider.updateUser(widget.user!.id!, user, _imageFile);
+      }
+
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Student Registered successfully')));
-        // Clear form
-        _nameController.clear();
-        _ageController.clear();
-        _addressController.clear();
-        _previousClassController.clear();
-        _mobileController.clear();
-        setState(() {
-          _imageFile = null;
-          _imageBytes = null;
-          _passedPreviousClass = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.user == null ? 'User Registered' : 'User Updated')));
+        Navigator.pop(context);
       } else if (mounted) {
-        final error = context.read<StudentProvider>().errorMessage;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error ?? 'Failed to register student')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(provider.errorMessage ?? 'Operation failed')));
       }
     }
   }
@@ -80,130 +91,109 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _passwordController.dispose();
     _ageController.dispose();
     _addressController.dispose();
-    _previousClassController.dispose();
-    _mobileController.dispose();
     super.dispose();
-  }
-
-  Widget _buildTextField(TextEditingController controller, String label, {TextInputType type = TextInputType.text, String? Function(String?)? validator}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: type,
-        style: const TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(color: Colors.white70),
-          filled: true,
-          fillColor: Colors.white.withOpacity(0.1),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide.none,
-          ),
-        ),
-        validator: validator ?? (value) => value == null || value.trim().isEmpty ? 'Please enter $label' : null,
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = context.watch<StudentProvider>().isLoading;
+    final isLoading = context.watch<UserProvider>().isLoading;
+    final roles = context.watch<RoleProvider>().roles;
 
     return Scaffold(
+      backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
-        title: const Text('Add User', style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF1E1E2C),
+        title: Text(widget.user == null ? 'Register User' : 'Edit User', style: const TextStyle(color: Color(0xFF1A1C1E), fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1C1E)),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Container(
-        height: double.infinity,
-        width: double.infinity,
-        decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-            child: GlassContainer(
-              padding: const EdgeInsets.all(20),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    GestureDetector(
-                      onTap: _pickImage,
-                      child: CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                        backgroundImage: _imageBytes != null ? MemoryImage(_imageBytes!) : null,
-                        child: _imageBytes == null
-                            ? const Icon(Icons.add_a_photo, size: 40, color: Colors.white70)
-                            : null,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20)]),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: CircleAvatar(
+                      radius: 50,
+                      backgroundColor: AppColors.primaryColor.withOpacity(0.1),
+                      backgroundImage: _imageBytes != null ? MemoryImage(_imageBytes!) : null,
+                      child: _imageBytes == null ? const Icon(Icons.add_a_photo, size: 40, color: AppColors.primaryColor) : null,
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  _buildTextField(_nameController, 'Full Name', Icons.person_outline),
+                  _buildTextField(_passwordController, 'Password', Icons.lock_outline, isPassword: true),
+                  _buildTextField(_ageController, 'Age', Icons.cake_outlined, type: TextInputType.number),
+                  _buildTextField(_addressController, 'Address', Icons.location_on_outlined, maxLines: 2),
+                  _buildRoleDropdown(roles),
+                  const SizedBox(height: 30),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: ElevatedButton(
+                      onPressed: isLoading ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                       ),
+                      child: isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(widget.user == null ? 'Submit' : 'Update User', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
-                    const SizedBox(height: 20),
-                    const Text('Register New Student', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 20),
-                    _buildTextField(_nameController, 'Name', validator: (val) {
-                      if (val == null || val.trim().isEmpty) return 'Please enter Name';
-                      if (RegExp(r'[0-9]').hasMatch(val)) return 'Name cannot contain numbers';
-                      return null;
-                    }),
-                    _buildTextField(_ageController, 'Age', type: TextInputType.number, validator: (val) {
-                      if (val == null || val.trim().isEmpty) return 'Please enter Age';
-                      final age = int.tryParse(val.trim());
-                      if (age == null) return 'Enter a valid number';
-                      if (age > 150) return 'Age cannot be greater than 150';
-                      if (age <= 0) return 'Age must be greater than 0';
-                      return null;
-                    }),
-                    _buildTextField(_addressController, 'Address'),
-                    _buildTextField(_previousClassController, 'Previous Class'),
-                    _buildTextField(_mobileController, 'Mobile', type: TextInputType.phone, validator: (val) {
-                      if (val == null || val.trim().isEmpty) return 'Please enter Mobile';
-                      if (val.trim().length != 10) return 'Mobile must be 10 digits';
-                      if (int.tryParse(val.trim()) == null) return 'Enter a valid mobile number';
-                      return null;
-                    }),
-                    SwitchListTile(
-                      title: const Text('Passed Previous Class?', style: TextStyle(color: Colors.white)),
-                      value: _passedPreviousClass,
-                      activeColor: AppColors.accentColor,
-                      onChanged: (val) {
-                        setState(() {
-                          _passedPreviousClass = val;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: isLoading ? null : _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentColor,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        child: isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text('Submit', style: TextStyle(fontSize: 18, color: Colors.white)),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String label, IconData icon, {TextInputType type = TextInputType.text, bool isPassword = false, int maxLines = 1}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: type,
+        obscureText: isPassword,
+        maxLines: isPassword ? 1 : maxLines,
+        style: const TextStyle(color: Color(0xFF1A1C1E)),
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, color: AppColors.primaryColor),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          filled: true,
+          fillColor: Colors.grey[50],
+        ),
+        validator: (v) => v == null || v.isEmpty ? 'Please enter $label' : null,
+      ),
+    );
+  }
+
+  Widget _buildRoleDropdown(List<RoleModel> roles) {
+    return DropdownButtonFormField<String>(
+      value: _selectedRole,
+      decoration: InputDecoration(
+        labelText: 'Role',
+        prefixIcon: const Icon(Icons.work_outline, color: AppColors.primaryColor),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey[50],
+      ),
+      items: roles.map((r) => DropdownMenuItem<String>(value: r.name, child: Text(r.name))).toList(),
+      onChanged: (v) => setState(() => _selectedRole = v),
+      validator: (v) => v == null ? 'Please select a role' : null,
     );
   }
 }

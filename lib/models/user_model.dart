@@ -1,35 +1,61 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+
 class UserModel {
-  final String uid;
-  final String email;
+  final String? id;
   final String name;
-  final String age;
+  final String password;
+  final int age;
+  final String address;
+  final String photoUrl; // Base64
+  final String role;
   final DateTime createdAt;
 
   UserModel({
-    required this.uid,
-    required this.email,
+    this.id,
     required this.name,
+    required this.password,
     required this.age,
+    required this.address,
+    required this.photoUrl,
+    required this.role,
     required this.createdAt,
   });
 
   Map<String, dynamic> toMap() {
     return {
-      'uid': uid,
-      'email': email,
       'name': name,
-      'age':age,
-      'createdAt': createdAt.toIso8601String(),
+      'password': password,
+      'age': age,
+      'address': address,
+      'photoUrl': photoUrl,
+      'role': role,
+      'createdAt': Timestamp.fromDate(createdAt),
     };
   }
 
-  factory UserModel.fromMap(Map<String, dynamic> map, String uid) {
+  factory UserModel.fromMap(Map<String, dynamic> map, String docId) {
+    DateTime createdAt;
+    try {
+      final ts = map['createdAt'];
+      if (ts is Timestamp) {
+        createdAt = ts.toDate();
+      } else {
+        createdAt = DateTime.now();
+      }
+    } catch (_) {
+      createdAt = DateTime.now();
+    }
+
     return UserModel(
-      uid: uid,
-      email: map['email'] ?? '',
-      name: map['name'] ?? '',
-      age: map['age'] ?? '',
-      createdAt: DateTime.tryParse(map['createdAt'] ?? '') ?? DateTime.now(),
+      id: docId,
+      name: map['name'] ?? 'Unnamed User',
+      password: map['password'] ?? '',
+      age: int.tryParse(map['age']?.toString() ?? '0') ?? 0,
+      address: map['address'] ?? '',
+      photoUrl: map['photoUrl'] ?? '',
+      role: map['role'] ?? 'User',
+      createdAt: createdAt,
     );
   }
 }

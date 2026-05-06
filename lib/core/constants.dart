@@ -1,30 +1,30 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Deep luxurious space aesthetic
-  static const Color primaryColor = Color(0xFF8A2BE2); // Vivid Purple
-  static const Color accentColor = Color(0xFF00E5FF);  // Cyan Neon
-  static const Color secondaryColor = Color(0xFF2A2D43);
-  static const Color backgroundColor = Color(0xFF0F0F16); // True deep black/blue
-  static const Color errorColor = Color(0xFFFF4C4C);
+  // Premium Luxurious White Aesthetic
+  static const Color primaryColor = Color(0xFF6C63FF); // Modern Indigo
+  static const Color accentColor = Color(0xFF00BFA6);  // Teal Accent
+  static const Color secondaryColor = Color(0xFFF0F2F5); // Soft Light Gray
+  static const Color backgroundColor = Color(0xFFF8F9FD); // Premium White
+  static const Color errorColor = Color(0xFFFF5252);
   
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFF8A2BE2), Color(0xFFB066FE)],
+    colors: [Color(0xFF6C63FF), Color(0xFF8E87FF)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient backgroundGradient = LinearGradient(
-    colors: [Color(0xFF0B0B11), Color(0xFF1E1B32)],
+    colors: [Color(0xFFF8F9FD), Color(0xFFFFFFFF)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
   static const LinearGradient glassBorderGradient = LinearGradient(
     colors: [
-      Color(0x80FFFFFF),
-      Color(0x10FFFFFF),
-      Color(0x808A2BE2),
+      Color(0xFFE0E0E0),
+      Color(0xFFF5F5F5),
+      Color(0xFFE0E0E0),
     ],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
